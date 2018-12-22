@@ -89,6 +89,21 @@ sub init_cache_for_accessors {
 	return $self;
 }
 
+sub demand_params {
+	my ( $self, $href, $arref, $p ) = @_;
+	$p ||= {};
+	for ( @{$arref} ) {
+		my $msg;
+		unless ( $href->{$_} ) {
+			my $callerbits = [ caller( 1 ) ];
+
+			$msg = "Missing required parameter [$_] in $callerbits->[3]";
+		}
+
+		croak $msg if $msg;
+	}
+}
+
 sub debug {
 	my ( $self, $msg ) = @_;
 	Carp::carp( $msg ) if $self->{debug_level};

@@ -90,7 +90,7 @@ sub _cache_or_db {
 
 sub _cache_or_db_or_new {
 	my ( $self, $p ) = @_;
-	warn Dumper( $p );
+
 	return $self->_cache_or_db( $p ) || $self->_cache_new( $p );
 }
 
@@ -104,8 +104,7 @@ sub _cache_new {
 
 	my $sth = $self->_preserve_sth( $p->{set_sth_label} ) or die "Failed to retrieve sth for $p->{set_sth_label}";
 	Carp::croak( "Missing sth for [$p->{set_sth_label}]" ) unless $sth;
-	warn Dumper( $p->{set_sth_params} );
-	warn Dumper( $self->{sths} );
+
 	$sth->execute( @{$p->{set_sth_params}} ) or die $DBI::errstr;
 	my $v = $self->_last_insert();
 
@@ -142,13 +141,8 @@ sub _last_insert {
 sub _cache_or_db_or_new_id_from_value {
 	my ( $self, $table, $value ) = @_;
 
-	# TODO accessor driven init, possibly including cache init ?
-
-	unless ( $self->{inited}->{_cache_or_db_or_new_id_from_value}->{$table} ) {
-		$self->_preserve_sth( "$table.get_id_from_value()", "select id from $table where value = ?" );
-		$self->_preserve_sth( "$table.set_id_from_value()", "insert into $table (value) values (?)" );
-
-	}
+	$self->_preserve_sth( "$table.get_id_from_value()", "select id from $table where value = ?" ) unless $self->_preserve_sth( "$table.get_id_from_value()" );
+	$self->_preserve_sth( "$table.set_id_from_value()", "insert into $table (value) values (?)" ) unless $self->_preserve_sth( "$table.set_id_from_value()" );
 
 	return $self->_cache_or_db_or_new(
 		{
@@ -160,6 +154,11 @@ sub _cache_or_db_or_new_id_from_value {
 			set_sth_params => [$value],
 		}
 	);
+}
+
+sub _set_cache_or_db_or_new_id_from_value_sths {
+	my ( $self, $table, $sth ) = @_;
+
 }
 
 sub _commit_maybe {
@@ -193,6 +192,7 @@ sub _commit {
 =head3 clean_finish
 	Close gracefully
 =cut
+
 sub clean_finish {
 	my ( $self ) = @_;
 	$self->_commit();
@@ -203,12 +203,13 @@ sub clean_finish {
 =head3 id_for_value
 	The whole point of the module, get a persistent integer id for a value 
 =cut
-sub id_for_value {
-	my ($self,$key,$value) = @_;
-	return $self->_cache_or_db_or_new_id_from_value($key,$value);
-}
-# TODO value_for_id ? 
 
+sub id_for_value {
+	my ( $self, $key, $value ) = @_;
+	return $self->_cache_or_db_or_new_id_from_value( $key, $value );
+}
+
+# TODO value_for_id ?
 
 =head1 AUTHOR
 
@@ -251,6 +252,5 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 =cut
-
 
 1;
