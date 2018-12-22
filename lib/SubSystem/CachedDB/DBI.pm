@@ -132,9 +132,10 @@ sub _last_insert {
 	unless ( $sth ) {
 		$sth = $self->_preserve_sth( 'last_insert', $qstring || 'select last_insert_rowid();' );
 	}
-
-	$sth->execute();
-	$sth->fetchrow_arrayref()->[0];
+	unless ( $qstring ) {
+		$sth->execute();
+		return $sth->fetchrow_arrayref()->[0];
+	}
 
 }
 
