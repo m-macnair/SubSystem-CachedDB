@@ -61,7 +61,7 @@ sub _cache_or_carp {
 
 sub _cache_or_db {
 	my ( $self, $p ) = @_;
-	for ( qw/cache get_sth_label get_sth_params cache_key / ) {
+	for ( qw/cache cache_key get_sth_label get_sth_params  / ) {
 		Carp::croak( "Missing [$_]" ) unless $p->{$_};
 	}
 
@@ -206,8 +206,8 @@ sub clean_finish {
 =cut
 
 sub id_for_value {
-	my ( $self, $key, $value ) = @_;
-	return $self->_cache_or_db_or_new_id_from_value( $key, $value );
+	my ( $self, $table, $value ) = @_;
+	return $self->_cache_or_db_or_new_id_from_value( $table, $value );
 }
 
 # TODO value_for_id ?
