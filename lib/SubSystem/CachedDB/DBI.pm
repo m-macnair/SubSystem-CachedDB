@@ -47,7 +47,11 @@ sub _init {
 		$self->dbh( $dbh );
 	}
 	$self->init_cache_for_accessors( $conf->{cache_names} || [] );
-	$self->sth_write_limit ? 1 : $self->sth_write_limit( 1000 );
+	$self->sth_write_limit ? 1 : $self->sth_write_limit( 100 );
+	unless ( $self->sth_write_counter ) {
+		my $v = 0;
+		$self->sth_write_counter( \$v );
+	}
 	return {pass => 1};
 }
 
@@ -67,24 +71,24 @@ sub _cache_or_db {
 
 	my $cache = $self->_cache_or_carp( $p );
 	if ( my $v = $cache->get( $p->{cache_key} ) ) {
-		$self->debug( "Cache hit for $p->{cache_key}" );
+		$self->debug( "Cache hit for $p->{cache_key}", 2 );
 		return $v;
 	}
 
-	$self->debug( "Cache miss for $p->{cache_key}" );
+	$self->debug( "Cache miss for $p->{cache_key}", 2 );
 
 	my $sth = $self->_preserve_sth( $p->{get_sth_label} );
 	Carp::croak( "Missing sth for [$p->{get_sth_label}]" ) unless $sth;
 	$sth->execute( @{$p->{get_sth_params}} );
 	if ( my $row = $sth->fetchrow_hashref() ) {
-		$self->debug( "DB hit for $p->{cache_key}" );
+		$self->debug( "DB hit for $p->{cache_key}", 2 );
 		my $v = $row->{$p->{cache_value} || 'id'};
 
 		# TODO use an optional sub to interpret DB values
 		$cache->set( $p->{cache_key}, $v );
 		return $v;
 	}
-	$self->debug( "DB miss for $p->{cache_key}" );
+	$self->debug( "DB miss for $p->{cache_key}", 2 );
 	return;
 }
 
@@ -110,7 +114,7 @@ sub _cache_new {
 
 	$self->_commit_maybe();
 	$cache->set( $p->{cache_key}, $v );
-	$self->debug( "set($p->{cache_key},$v)" );
+	$self->debug( "set($p->{cache_key},$v)", 2 );
 	return $v;
 }
 
@@ -118,7 +122,7 @@ sub _preserve_sth {
 	my ( $self, $label, $qstring ) = @_;
 
 	if ( $qstring ) {
-		$self->debug( "setting $label qstring to $qstring" );
+		$self->debug( "setting $label qstring to $qstring", 2 );
 		my $sth = $self->dbh->prepare( $qstring ) or die $DBI::errstr;
 		$self->{sths}->{$label} = $sth;
 	}
@@ -168,7 +172,9 @@ sub _commit_maybe {
 		$counter ||= $self->sth_write_counter;
 		$limit   ||= $self->sth_write_limit;
 		$$counter++;
+
 		if ( $$counter >= $limit ) {
+
 			return $self->_commit( $counter );
 		}
 		return 2;
@@ -178,8 +184,9 @@ sub _commit_maybe {
 
 sub _commit {
 	my ( $self, $counter ) = @_;
+
 	if ( $self->dbh->{AutoCommit} == 0 ) {
-		$self->debug( " COMMIT " );
+		$self->debug( "\tCOMMIT", 1 );
 		$self->dbh->commit();
 		$$counter = 0;
 
