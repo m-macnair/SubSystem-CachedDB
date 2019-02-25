@@ -199,12 +199,24 @@ sub _commit {
 	These will be duplicated/translated in sibling modules 
 =head3 clean_finish
 	Close gracefully
+	From the dbi docs; print out statements currently extant against a db, useful for finding an awkward test flaw
+	my $info = $self->dbh->{Driver}->visit_child_handles(sub {
+		my ($h, $info) = @_;
+		++$info->{ $h->{Type} }; # count types of handles (dr/db/st)
+		if( $h->{Type} eq 'st' ){
+			warn Dumper($h->{Statement});
+		}
+		return $info; # visit kids
+	});
+	
 =cut
 
 sub clean_finish {
 	my ( $self ) = @_;
 	$self->_commit();
+
 	delete( $self->{sths} );
+
 	$self->dbh->disconnect();
 }
 

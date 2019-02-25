@@ -107,7 +107,8 @@ sub demand_params {
 sub debug {
 	my ( $self, $msg, $level ) = @_;
 	$level ||= 1;
-	Carp::carp( $msg ) if $self->{debug_level} >= $level;
+
+	Carp::carp( $msg ) if ( $self->{debug_level} && $self->{debug_level} >= $level );
 }
 
 =head1 AUTHOR
